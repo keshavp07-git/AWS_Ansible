@@ -1,0 +1,40 @@
+- hosts: localhost # localhost is used to run the playbook on the local machine
+# This playbook creates an EC2 key pair and starts an EC2 instance in AWS.
+  gather_facts: False
+  tasks: # Tasks to be executed in the playbook
+    - name: Create key pair # Task to create an EC2 key pair
+      ec2_key: # Using the ec2_key module to create a key pair
+        name: sample # Name of the key pair
+        region: us-east-1 # AWS region where the key pair will be created
+      register: keyout # Register the output of the task to a variable named keyout
+
+      #- name: print key # Task to print the key pair details
+      #debug: 
+      #  var: keyout # Debugging output to see the details of the created key pair
+
+
+    - name: save key # Task to save the private key of the created key pair
+      copy: # Using the copy module to save the key
+        content: "{{keyout.key.private_key}}" # Content of the key to be saved
+        dest: ./sample.pem # Destination file where the key will be saved
+      when: keyout.changed # This task will only run if the key pair was created (i.e., if keyout.changed is True)
+
+    - name: start an instance # Task to start an EC2 instance
+      amazon.aws.ec2_instance: # Using the ec2_instance module from the amazon.aws collection to start an instance
+        name: "public-compute-instance" # Name of the EC2 instance
+        key_name: "sample" # Name of the key pair to be used for the instance
+        #vpc_subnet_id: subnet-5ca1ab1e
+        instance_type: t2.micro # Type of the EC2 instance
+        security_group: default # Security group to be associated with the instance
+        #network: # Network configuration for the instance
+           # assign_public_ip: true # Assign a public IP to the instance
+        image_id: ami-0953476d60561c955 # AMI ID for the instance
+        exact_count: 1 # Ensure exactly one instance is running
+        region: us-east-1 # AWS region where the instance will be created
+        tags: # Tags to be applied to the instance
+          Environment: Testing # Tag for the environment
+
+# To run this playbook, you need to have the following prerequisites:          
+# pip install ansible amazon.aws
+# ansible-galaxy collection install amazon.aws
+#pip install boto3
